@@ -1,13 +1,11 @@
 use macroquad::prelude::*;
 
-// 1. Nossa estrutura de Ponto com a permissão de cópia
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)] // Adicionado PartialEq para podermos comparar Pontos facilmente
 struct Ponto {
     x: f32,
     y: f32,
 }
 
-// 2. As direções possíveis
 enum Direcao {
     Cima,
     Baixo,
@@ -15,7 +13,6 @@ enum Direcao {
     Direita,
 }
 
-// 3. A função principal
 #[macroquad::main("Snake Game")]
 async fn main() {
     let mut corpo = vec![
@@ -24,59 +21,92 @@ async fn main() {
         Ponto { x: 8.0, y: 10.0 },  // rabo
     ];
     let tamanho_bloco = 20.0;
-
-    let mut maca = Ponto { x: 15.0, y: 10.0 }; // posição inicial da maçã
+    let mut maca = Ponto { x: 15.0, y: 10.0 };
 
     let mut direcao = Direcao::Direita;
     let mut ultimo_tempo = get_time();
-    let velocidade = 0.15; // velocidade da cobra
+    let velocidade = 0.15; 
+    
+    // 1. ADICIONADO: Variável de estado
+    let mut game_over = false;
 
     loop {
         clear_background(DARKGRAY);
 
-        // Lendo o teclado para movimentar a cobra   
-        if is_key_pressed(KeyCode::Right) {
-            direcao = Direcao::Direita;
-        } else if is_key_pressed(KeyCode::Left) {
-            direcao = Direcao::Esquerda;
-        } else if is_key_pressed(KeyCode::Down) {
-            direcao = Direcao::Baixo;
-        } else if is_key_pressed(KeyCode::Up) {
-            direcao = Direcao::Cima;
-        }
+        // 2. Se o jogo acabou, desenhamos o texto e travamos a lógica
+        if game_over {
+            // Desenha o texto vermelho no meio da tela
+            draw_text("GAME OVER", screen_width() / 2.0 - 100.0, screen_height() / 2.0, 50.0, RED);
+            draw_text("Pressione ESPAÇO para recomeçar", screen_width() / 2.0 - 200.0, screen_height() / 2.0 + 40.0, 30.0, WHITE);
 
-        // Verificando se já passou tempo suficiente para mover a cobra
-        if get_time() - ultimo_tempo > velocidade {
-            
-            let mut nova_cabeca = corpo[0];
-
-            match direcao {
-                Direcao::Cima => nova_cabeca.y -= 1.0,
-                Direcao::Baixo => nova_cabeca.y += 1.0,
-                Direcao::Esquerda => nova_cabeca.x -= 1.0,
-                Direcao::Direita => nova_cabeca.x += 1.0,
+            // Reinicia o jogo se apertar espaço
+            if is_key_pressed(KeyCode::Space) {
+                corpo = vec![
+                    Ponto { x: 10.0, y: 10.0 },
+                    Ponto { x: 9.0, y: 10.0 },
+                    Ponto { x: 8.0, y: 10.0 },
+                ];
+                direcao = Direcao::Direita;
+                game_over = false;
             }
-            
-            // Sempre inserimos a nova cabeça primeiro
-            corpo.insert(0, nova_cabeca);
+        } 
+        // 3. Se NÃO for game over, o jogo roda normalmente
+        else {
+            if is_key_pressed(KeyCode::Right) {
+                direcao = Direcao::Direita;
+            } else if is_key_pressed(KeyCode::Left) {
+                direcao = Direcao::Esquerda;
+            } else if is_key_pressed(KeyCode::Down) {
+                direcao = Direcao::Baixo;
+            } else if is_key_pressed(KeyCode::Up) {
+                direcao = Direcao::Cima;
+            }
 
-            // 2. ADICIONADO: Lógica de comer a maçã e crescer
-            if nova_cabeca.x == maca.x && nova_cabeca.y == maca.y {
-                // Comeu! 
-                // Sorteia uma nova posição para a maçã (vamos supor um grid de 40x30 blocos)
-                // O "as f32" converte o número inteiro do sorteio para decimal
-                maca.x = macroquad::rand::gen_range(0, 40) as f32;
-                maca.y = macroquad::rand::gen_range(0, 30) as f32;
+            if get_time() - ultimo_tempo > velocidade {
+                let mut nova_cabeca = corpo[0];
+
+                match direcao {
+                    Direcao::Cima => nova_cabeca.y -= 1.0,
+                    Direcao::Baixo => nova_cabeca.y += 1.0,
+                    Direcao::Esquerda => nova_cabeca.x -= 1.0,
+                    Direcao::Direita => nova_cabeca.x += 1.0,
+                }
+
+                // 4. VERIFICAÇÃO DE COLISÃO COM A PAREDE
+                // A tela começa no (0,0). O limite direito é a largura total dividida pelo bloco.
+                let max_x = screen_width() / tamanho_bloco;
+                let max_y = screen_height() / tamanho_bloco;
+
+                if nova_cabeca.x < 0.0 || nova_cabeca.x >= max_x || nova_cabeca.y < 0.0 || nova_cabeca.y >= max_y {
+                    game_over = true;
+                }
+
+                // 5. VERIFICAÇÃO DE COLISÃO COM O PRÓPRIO CORPO
+                // O .contains() verifica se a nova cabeça já existe dentro do vetor do corpo
+                if corpo.contains(&nova_cabeca) {
+                    game_over = true;
+                }
                 
-                // NOTA: Como não damos corpo.pop() aqui, a cobra cresce!
-            } else {
-                // Não comeu a maçã, então removemos o rabo para manter o tamanho
-                corpo.pop(); 
-            }
+                // Só atualiza a cobra se ela não bateu
+                if !game_over {
+                    corpo.insert(0, nova_cabeca);
 
-            ultimo_tempo = get_time();
+                    if nova_cabeca.x == maca.x && nova_cabeca.y == maca.y {
+                        let max_grid_x = (screen_width() / tamanho_bloco) as i32;
+                        let max_grid_y = (screen_height() / tamanho_bloco) as i32;
+                        
+                        maca.x = macroquad::rand::gen_range(0, max_grid_x) as f32;
+                        maca.y = macroquad::rand::gen_range(0, max_grid_y) as f32;
+                    } else {
+                        corpo.pop(); 
+                    }
+                }
+
+                ultimo_tempo = get_time();
+            }
         }
-        //desenhando a maça
+
+        // --- DESENHOS (sempre desenha, mesmo no game over) ---
         draw_rectangle(
             maca.x * tamanho_bloco,
             maca.y * tamanho_bloco,
@@ -84,10 +114,9 @@ async fn main() {
             tamanho_bloco,
             RED,
         );
-        // Desenhando o corpo da cobra
+
         for (i, parte) in corpo.iter().enumerate() {
             let cor = if i == 0 { DARKGREEN } else { GREEN };
-
             draw_rectangle(
                 parte.x * tamanho_bloco,
                 parte.y * tamanho_bloco,
