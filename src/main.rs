@@ -1,11 +1,13 @@
 use macroquad::prelude::*;
 
-#[derive(Clone, Copy, PartialEq)] // Adicionado PartialEq para podermos comparar Pontos facilmente
+#[derive(Clone, Copy, PartialEq)]
 struct Ponto {
     x: f32,
     y: f32,
 }
 
+
+#[derive(PartialEq)]
 enum Direcao {
     Cima,
     Baixo,
@@ -16,9 +18,9 @@ enum Direcao {
 #[macroquad::main("Snake Game")]
 async fn main() {
     let mut corpo = vec![
-        Ponto { x: 10.0, y: 10.0 }, // cabeca
-        Ponto { x: 9.0, y: 10.0 },  // corpo
-        Ponto { x: 8.0, y: 10.0 },  // rabo
+        Ponto { x: 10.0, y: 10.0 },
+        Ponto { x: 9.0, y: 10.0 },
+        Ponto { x: 8.0, y: 10.0 },
     ];
     let tamanho_bloco = 20.0;
     let mut maca = Ponto { x: 15.0, y: 10.0 };
@@ -26,20 +28,16 @@ async fn main() {
     let mut direcao = Direcao::Direita;
     let mut ultimo_tempo = get_time();
     let velocidade = 0.15; 
-    
-    // 1. ADICIONADO: Variável de estado
     let mut game_over = false;
+    let mut pontuacao = 0;
 
     loop {
         clear_background(DARKGRAY);
 
-        // 2. Se o jogo acabou, desenhamos o texto e travamos a lógica
         if game_over {
-            // Desenha o texto vermelho no meio da tela
             draw_text("GAME OVER", screen_width() / 2.0 - 100.0, screen_height() / 2.0, 50.0, RED);
             draw_text("Pressione ESPAÇO para recomeçar", screen_width() / 2.0 - 200.0, screen_height() / 2.0 + 40.0, 30.0, WHITE);
 
-            // Reinicia o jogo se apertar espaço
             if is_key_pressed(KeyCode::Space) {
                 corpo = vec![
                     Ponto { x: 10.0, y: 10.0 },
@@ -48,17 +46,17 @@ async fn main() {
                 ];
                 direcao = Direcao::Direita;
                 game_over = false;
+                pontuacao = 0; 
             }
-        } 
-        // 3. Se NÃO for game over, o jogo roda normalmente
-        else {
-            if is_key_pressed(KeyCode::Right) {
+        } else {
+            // 2. MODIFICADO: Só aceita a mudança se a direção atual NÃO for a oposta
+            if is_key_pressed(KeyCode::Right) && direcao != Direcao::Esquerda {
                 direcao = Direcao::Direita;
-            } else if is_key_pressed(KeyCode::Left) {
+            } else if is_key_pressed(KeyCode::Left) && direcao != Direcao::Direita {
                 direcao = Direcao::Esquerda;
-            } else if is_key_pressed(KeyCode::Down) {
+            } else if is_key_pressed(KeyCode::Down) && direcao != Direcao::Cima {
                 direcao = Direcao::Baixo;
-            } else if is_key_pressed(KeyCode::Up) {
+            } else if is_key_pressed(KeyCode::Up) && direcao != Direcao::Baixo {
                 direcao = Direcao::Cima;
             }
 
@@ -72,8 +70,6 @@ async fn main() {
                     Direcao::Direita => nova_cabeca.x += 1.0,
                 }
 
-                // 4. VERIFICAÇÃO DE COLISÃO COM A PAREDE
-                // A tela começa no (0,0). O limite direito é a largura total dividida pelo bloco.
                 let max_x = screen_width() / tamanho_bloco;
                 let max_y = screen_height() / tamanho_bloco;
 
@@ -81,13 +77,10 @@ async fn main() {
                     game_over = true;
                 }
 
-                // 5. VERIFICAÇÃO DE COLISÃO COM O PRÓPRIO CORPO
-                // O .contains() verifica se a nova cabeça já existe dentro do vetor do corpo
                 if corpo.contains(&nova_cabeca) {
                     game_over = true;
                 }
                 
-                // Só atualiza a cobra se ela não bateu
                 if !game_over {
                     corpo.insert(0, nova_cabeca);
 
@@ -97,6 +90,7 @@ async fn main() {
                         
                         maca.x = macroquad::rand::gen_range(0, max_grid_x) as f32;
                         maca.y = macroquad::rand::gen_range(0, max_grid_y) as f32;
+                        pontuacao += 10;
                     } else {
                         corpo.pop(); 
                     }
@@ -106,7 +100,6 @@ async fn main() {
             }
         }
 
-        // --- DESENHOS (sempre desenha, mesmo no game over) ---
         draw_rectangle(
             maca.x * tamanho_bloco,
             maca.y * tamanho_bloco,
@@ -125,6 +118,9 @@ async fn main() {
                 cor,
             );
         }
+
+        let placar_texto = format!("Pontos: {}", pontuacao);
+        draw_text(&placar_texto, 10.0, 30.0, 30.0, WHITE);
 
         next_frame().await;
     }
