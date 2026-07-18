@@ -5,6 +5,15 @@ struct Ponto {
     x: f32,
     y: f32,
 }
+// Criando um Enum para definir a direção da cobra
+enum Direcao {
+    Cima,
+    Baixo, 
+    Esquerda, 
+    Direita,
+}
+
+
 
 #[macroquad::main("Snake Game")]
 async fn main() {
@@ -14,21 +23,39 @@ async fn main() {
        //tamanho inicial de cada bloco de pixel
        let tamanho_bloco = 20.0;
 
+
+       let mut direcao = Direcao::Direita;
+       let mut ultimo_tempo = get_time();
+       let velocidade = 0.15; // velocidade da cobra
+
        loop{
         clear_background(DARKGRAY);
 
         //Lendo o teclado para movimentar a cobra   
         if is_key_pressed(KeyCode::Right) {
-            cabeca.x += 1.0;
+            direcao = Direcao::Direita;
         }else if is_key_pressed(KeyCode::Left) {
-            cabeca.x -= 1.0 ;
+            direcao = Direcao::Esquerda;
         }else if is_key_pressed(KeyCode::Down) {
-            cabeca.y += 1.0;
+            direcao = Direcao::Baixo;
         }
         else if is_key_pressed(KeyCode::Up) {
-            cabeca.y -= 1.0;
+            direcao = Direcao::Cima;
         }
-    
+        
+        // verificando se já passou tempo suficiente para mover a cobra
+        if get_time() - ultimo_tempo > velocidade {
+
+            //match do rust é tipo o switch
+            match direcao {
+                Direcao::Cima => cabeca.y -= 1.0,
+                Direcao::Baixo => cabeca.y += 1.0,
+                Direcao::Esquerda => cabeca.x -= 1.0,
+                Direcao::Direita => cabeca.x += 1.0
+            }
+            //reinicia o cronograma 
+            ultimo_tempo = get_time();
+        }
 
 
 
