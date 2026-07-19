@@ -36,6 +36,7 @@ async fn main() {
         if game_over {
             draw_text("GAME OVER", screen_width() / 2.0 - 100.0, screen_height() / 2.0, 50.0, RED);
             draw_text("Pressione ESPAÇO para recomeçar", screen_width() / 2.0 - 200.0, screen_height() / 2.0 + 40.0, 30.0, WHITE);
+            draw_text("Desenvolvido por Vitor Paiva", screen_width() / 2.0 - 200.0, screen_height() / 2.0 + 80.0, 30.0, WHITE);
 
             if is_key_pressed(KeyCode::Space) {
                 corpo = vec![
