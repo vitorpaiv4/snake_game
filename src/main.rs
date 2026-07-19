@@ -6,7 +6,6 @@ struct Ponto {
     y: f32,
 }
 
-
 #[derive(PartialEq)]
 enum Direcao {
     Cima,
@@ -49,7 +48,6 @@ async fn main() {
                 pontuacao = 0; 
             }
         } else {
-            // 2. MODIFICADO: Só aceita a mudança se a direção atual NÃO for a oposta
             if is_key_pressed(KeyCode::Right) && direcao != Direcao::Esquerda {
                 direcao = Direcao::Direita;
             } else if is_key_pressed(KeyCode::Left) && direcao != Direcao::Direita {
@@ -73,10 +71,22 @@ async fn main() {
                 let max_x = screen_width() / tamanho_bloco;
                 let max_y = screen_height() / tamanho_bloco;
 
-                if nova_cabeca.x < 0.0 || nova_cabeca.x >= max_x || nova_cabeca.y < 0.0 || nova_cabeca.y >= max_y {
-                    game_over = true;
+                // 1. MODIFICADO: Lógica de Wrap-Around em vez de morte
+                // Eixo X
+                if nova_cabeca.x < 0.0 {
+                    nova_cabeca.x = max_x - 1.0; // Saiu pela esquerda, entra na direita
+                } else if nova_cabeca.x >= max_x {
+                    nova_cabeca.x = 0.0; // Saiu pela direita, entra na esquerda
                 }
 
+                // Eixo Y
+                if nova_cabeca.y < 0.0 {
+                    nova_cabeca.y = max_y - 1.0; // Saiu por cima, entra por baixo
+                } else if nova_cabeca.y >= max_y {
+                    nova_cabeca.y = 0.0; // Saiu por baixo, entra por cima
+                }
+
+                // 2. Game Over APENAS se bater no próprio corpo
                 if corpo.contains(&nova_cabeca) {
                     game_over = true;
                 }
@@ -85,8 +95,8 @@ async fn main() {
                     corpo.insert(0, nova_cabeca);
 
                     if nova_cabeca.x == maca.x && nova_cabeca.y == maca.y {
-                        let max_grid_x = (screen_width() / tamanho_bloco) as i32;
-                        let max_grid_y = (screen_height() / tamanho_bloco) as i32;
+                        let max_grid_x = max_x as i32;
+                        let max_grid_y = max_y as i32;
                         
                         maca.x = macroquad::rand::gen_range(0, max_grid_x) as f32;
                         maca.y = macroquad::rand::gen_range(0, max_grid_y) as f32;
